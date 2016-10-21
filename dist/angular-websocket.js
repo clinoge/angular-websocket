@@ -75,12 +75,12 @@
   // $WebSocketProvider.$inject = ['$rootScope', '$q', '$timeout', '$websocketBackend'];
   function $WebSocketProvider($rootScope, $q, $timeout, $websocketBackend) {
 
-    function $WebSocket(url, protocols, options) {
+    function $WebSocket(url, protocols, options, wsOptions = {}) {
       if (!options && isObject(protocols) && !isArray(protocols)) {
         options = protocols;
         protocols = undefined;
       }
-
+      this.wsOptions = wsOptions;
       this.protocols = protocols;
       this.url = url || 'Missing URL';
       this.ssl = /(wss)/i.test(this.url);
@@ -149,7 +149,7 @@
 
     $WebSocket.prototype._connect = function _connect(force) {
       if (force || !this.socket || this.socket.readyState !== this._readyStateConstants.OPEN) {
-        this.socket = $websocketBackend.create(this.url, this.protocols);
+        this.socket = $websocketBackend.create(this.url, this.protocols, this.wsOptions);
         this.socket.onmessage = _angular2.default.bind(this, this._onMessageHandler);
         this.socket.onopen = _angular2.default.bind(this, this._onOpenHandler);
         this.socket.onerror = _angular2.default.bind(this, this._onErrorHandler);
@@ -386,11 +386,15 @@
 
   // $WebSocketBackendProvider.$inject = ['$log'];
   function $WebSocketBackendProvider($log) {
-    this.create = function create(url, protocols) {
+    this.create = function create(url, protocols, options = {}) {
       var match = /wss?:\/\//.exec(url);
 
       if (!match) {
         throw new Error('Invalid url provided');
+      }
+
+      if (options) {
+        return new Socket(url, protocols, options);
       }
 
       if (protocols) {
